@@ -166,15 +166,21 @@ npm run dev
 
 ## 8. Deployment (Vercel + Supabase)
 
-1. Push this repo to GitHub/GitLab.
-2. In Supabase: create a project, run migrations (`supabase db push` from CI or locally),
+1. In Vercel Project Settings → General, set **Root Directory** to `MasjidFinder`.
+  The Next.js app lives in that folder; deploying the repository root produces a Vercel
+  404 because it contains no `app/` directory.
+2. Set Framework Preset to **Next.js**, leave Output Directory blank/default, and use the
+  normal `npm install` and `npm run build` commands.
+3. Push this repo to GitHub/GitLab.
+4. In Supabase: create a project, run migrations (`supabase db push` from CI or locally),
    run the country/state/city seed files, configure the phone OTP provider.
-3. In Vercel: import the repo, set the environment variables from §6 (mark
+5. In Vercel: import the repo, set the environment variables from §6 for Production,
+  Preview, and Development (mark
    `SUPABASE_SERVICE_ROLE_KEY` and `CRON_SECRET` as **server-only/secret**, never expose them
    to the client environment group).
-4. Deploy the Edge Function separately: `supabase functions deploy expire-subscriptions`, then
+6. Deploy the Edge Function separately: `supabase functions deploy expire-subscriptions`, then
    schedule it.
-5. First deploy: `next-pwa` only registers the service worker in production builds
+7. First deploy: `next-pwa` only registers the service worker in production builds
    (`disable: process.env.NODE_ENV === "development"` in `next.config.mjs`), so PWA
    installability only shows up on the deployed Vercel build, not `next dev`.
 

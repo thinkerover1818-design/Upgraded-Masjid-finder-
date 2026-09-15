@@ -33,7 +33,7 @@ export default async function SearchPage({
         <BackBar />
         <div className="rounded-xl border border-black/10 bg-white p-6 text-center">
           <p className="text-sm text-ink-600 mb-2">
-            "Nearby" needs your device location. This page doesn't yet request browser geolocation — use{" "}
+            &quot;Nearby&quot; needs your device location. This page doesn&apos;t yet request browser geolocation — use{" "}
             <strong>My Country</strong>, <strong>Other Countries</strong>, or <strong>Global</strong> for now, or
             search again after enabling location in your browser.
           </p>
@@ -62,7 +62,7 @@ export default async function SearchPage({
       )}
       {!error && (data as SearchResult[] | null)?.length === 0 && (
         <div className="rounded-xl border border-black/10 bg-white p-6 text-center text-sm text-ink-600">
-          No results yet for this search. Try widening the scope to "All Countries" or "Global", or check back once
+          No results yet for this search. Try widening the scope to &quot;All Countries&quot; or &quot;Global&quot;, or check back once
           more profiles have joined.
         </div>
       )}

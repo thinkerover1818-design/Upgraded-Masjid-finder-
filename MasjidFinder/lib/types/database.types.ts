@@ -14,5 +14,4 @@
  * production on placeholder types.
  */
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type Database = any;

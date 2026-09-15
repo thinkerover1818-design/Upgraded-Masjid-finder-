@@ -397,7 +397,7 @@ export default function SignupWizard() {
       {step === "phone" && (
         <section>
           <h2 className="text-lg font-semibold text-emerald-900 mb-1">Verify your phone number</h2>
-          <p className="text-sm text-ink-400 mb-4">We'll text you a one-time code.</p>
+          <p className="text-sm text-ink-400 mb-4">We&apos;ll text you a one-time code.</p>
           <div className="flex gap-2 mb-6">
             <div className="border rounded-lg p-3 text-sm bg-gray-50 text-ink-600 whitespace-nowrap">
               {selectedCountry?.calling_code ?? "+--"}

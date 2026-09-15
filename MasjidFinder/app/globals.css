@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  background: #f7f4ec;
+  color: #1b2320;
+}
+
+/* RTL support: Arabic and Urdu flip the whole shell via dir="rtl" set in
+   app/layout.tsx from the active language's `is_rtl` flag (languages table),
+   not a hard-coded list of language codes. */
+[dir="rtl"] {
+  text-align: right;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #eee7d6 25%, #f3efe2 37%, #eee7d6 63%);
+  background-size: 400% 100%;
+  animation: skeleton-loading 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}

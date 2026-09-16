@@ -1,0 +1,12 @@
+{
+  "name": "masjidfinder-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm --prefix MasjidFinder run dev",
+    "build": "npm --prefix MasjidFinder run build",
+    "start": "npm --prefix MasjidFinder run start",
+    "lint": "npm --prefix MasjidFinder run lint",
+    "typecheck": "npm --prefix MasjidFinder run typecheck",
+    "install:app": "npm --prefix MasjidFinder install"
+  }
+}

@@ -40,7 +40,7 @@ const RESEND_SECONDS = 30;
 
 export default function SignupWizard() {
   const router = useRouter();
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const { countries, states, cities, loadingCountries, loadingStates, loadingCities, loadStates, loadCities } =
     useLocationCascade();
 

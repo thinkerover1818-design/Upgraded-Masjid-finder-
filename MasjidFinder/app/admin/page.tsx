@@ -1,0 +1,23 @@
+import Link from "next/link";
+import { ArrowUpRight, BarChart3 } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { AdminHeader, EmptyState, ErrorState, StatCard } from "./ui";
+
+export const dynamic = "force-dynamic";
+
+type ActivityRow = { rollup_date: string; event_type: string; event_count: number };
+
+export default async function AdminDashboard() {
+  const supabase = createClient();
+  const [{ count: users, error: usersError }, { count: masjids }, { count: madrasas }, { count: events }, { count: pendingVerification }, { count: openReports }, { data: activity, error: activityError }] = await Promise.all([
+    supabase.from("profiles").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase.from("masjids").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase.from("madrasas").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase.from("events").select("id", { count: "exact", head: true }).is("deleted_at", null),
+    supabase.from("verification_requests").select("id", { count: "exact", head: true }).eq("status", "pending"),
+    supabase.from("reports").select("id", { count: "exact", head: true }).eq("status", "open"),
+    supabase.from("analytics_daily_rollup").select("rollup_date, event_type, event_count").order("rollup_date", { ascending: false }).limit(8) as unknown as Promise<{ data: ActivityRow[] | null; error: { message: string } | null }>,
+  ]);
+
+  return <main className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8"><AdminHeader eyebrow="Control centre" title="Good to see you" description="A live view of platform health, moderation workload, and community growth." action={<Link href="/admin/verification" className="inline-flex items-center gap-2 rounded-md bg-emerald-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700">Review queue <ArrowUpRight size={16} /></Link>} />{usersError ? <ErrorState message={usersError.message} /> : <><section className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="Active profiles" value={users ?? 0} detail="Not deleted" /><StatCard label="Masjids" value={masjids ?? 0} detail="All managed locations" /><StatCard label="Madrasas" value={madrasas ?? 0} detail="All managed locations" /><StatCard label="Upcoming events" value={events ?? 0} detail="Active event records" /></section><section className="mt-6 grid gap-6 lg:grid-cols-[1.35fr_0.65fr]"><div className="rounded-lg border border-black/8 bg-white p-5"><div className="mb-5 flex items-center justify-between"><div><h2 className="font-bold text-emerald-900">Operations snapshot</h2><p className="mt-1 text-xs text-ink-400">Items needing an administrator&apos;s attention</p></div><BarChart3 size={19} className="text-gold-600" /></div><div className="grid gap-3 sm:grid-cols-3"><Link href="/admin/verification" className="rounded-md bg-sand-50 p-4 hover:bg-emerald-100"><p className="text-xs text-ink-600">Verification queue</p><p className="mt-2 text-xl font-bold text-emerald-900">{pendingVerification ?? 0}</p><p className="mt-1 text-xs text-gold-600">Review now</p></Link><Link href="/admin/reports" className="rounded-md bg-sand-50 p-4 hover:bg-emerald-100"><p className="text-xs text-ink-600">Open reports</p><p className="mt-2 text-xl font-bold text-emerald-900">{openReports ?? 0}</p><p className="mt-1 text-xs text-gold-600">Open inbox</p></Link><Link href="/admin/subscriptions" className="rounded-md bg-sand-50 p-4 hover:bg-emerald-100"><p className="text-xs text-ink-600">Purchase enquiries</p><p className="mt-2 text-xl font-bold text-emerald-900">View</p><p className="mt-1 text-xs text-gold-600">Manage revenue</p></Link></div></div><div className="rounded-lg border border-black/8 bg-white p-5"><h2 className="font-bold text-emerald-900">Recent activity</h2><p className="mb-4 mt-1 text-xs text-ink-400">Daily rollups from Supabase analytics</p>{activityError ? <p className="text-sm text-red-700">{activityError.message}</p> : (activity?.length ?? 0) === 0 ? <EmptyState title="No analytics yet" description="Events will appear here as the platform is used." /> : <ul className="divide-y divide-black/5">{activity?.map((item) => <li key={`${item.rollup_date}-${item.event_type}`} className="flex items-center justify-between py-2.5 text-sm"><span className="capitalize text-ink-600">{item.event_type.replaceAll("_", " ")}</span><span className="font-semibold text-emerald-900">{item.event_count}</span></li>)}</ul>}</div></section></>}</main>;
+}

@@ -6,7 +6,7 @@ import HomeSearchBar from "@/components/HomeSearchBar";
 // nothing is hard-coded, so renaming a category or adding a country never
 // requires touching this file (satisfies the "no code change" requirement).
 async function getHomeData() {
-  const supabase = createClient();
+  const supabase = createClient() as any;
 
   const [{ data: settingsRows }, { data: categories }, { data: countries }] = await Promise.all([
     supabase
@@ -90,7 +90,7 @@ export default async function Home() {
         <h2 className="text-xl font-medium text-emerald-900 mb-1">Browse by need</h2>
         <p className="text-sm text-ink-400 mb-4">Every category is two-way — post a need, or list your availability.</p>
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
-          {data.categories.map((c) => (
+          {data.categories.map((c: any) => (
             <Link
               key={c.id}
               href={`/search?role=${c.role_key}`}

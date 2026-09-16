@@ -24,7 +24,7 @@ async function resolveLocale() {
   const cookieStore = cookies();
   const requested = cookieStore.get("lang")?.value ?? "en";
   try {
-    const supabase = createClient();
+    const supabase = createClient() as any;
     const { data } = await supabase
       .from("languages")
       .select("code, is_rtl")

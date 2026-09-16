@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // the server-side enforcement the spec requires, not a client-side check).
 async function decide(formData: FormData) {
   "use server";
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const id = String(formData.get("id"));
   const decision = String(formData.get("decision")) as "verified" | "rejected";
   const notes = String(formData.get("notes") ?? "");
@@ -44,7 +44,7 @@ async function decide(formData: FormData) {
 }
 
 export default async function VerificationQueuePage() {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -72,7 +72,7 @@ export default async function VerificationQueuePage() {
       {error && <p className="text-sm text-red-700 mb-4">Could not load queue: {error.message}</p>}
       {!error && (requests?.length ?? 0) === 0 && <p className="text-sm text-ink-400">No pending verification requests.</p>}
       <ul className="flex flex-col gap-4">
-        {(requests ?? []).map((r) => (
+        {(requests ?? []).map((r: any) => (
           <li key={r.id} className="rounded-xl border border-black/10 bg-white p-4">
             <p className="text-sm font-semibold text-ink-900 mb-1">
               {r.entity_type} · {r.entity_id.slice(0, 8)}

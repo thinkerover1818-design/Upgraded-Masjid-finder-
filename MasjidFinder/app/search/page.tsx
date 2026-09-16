@@ -21,7 +21,7 @@ export default async function SearchPage({
 }: {
   searchParams: { q?: string; country?: string; scope?: string; role?: string };
 }) {
-  const supabase = createClient();
+  const supabase = createClient() as any;
   const scope = searchParams.scope ?? "all_countries";
 
   if (scope === "nearby") {

@@ -6,6 +6,11 @@ export async function POST(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Please log in first." }, { status: 401 });
   const body = await request.json().catch(() => null);
+  if (body?.action === "accept" && typeof body.connectionId === "string") {
+    const { data, error } = await supabase.rpc("fn_accept_connection", { p_connection_id: body.connectionId, p_acting_user: user.id });
+    if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json({ status: "accepted", conversationId: data?.id ?? null });
+  }
   const recipientId = typeof body?.recipientId === "string" ? body.recipientId : "";
   if (!recipientId || recipientId === user.id) return NextResponse.json({ error: "Choose another profile." }, { status: 400 });
   const { data, error } = await supabase.rpc("fn_request_connection", { p_requester: user.id, p_recipient: recipientId });

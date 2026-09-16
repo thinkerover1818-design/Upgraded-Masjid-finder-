@@ -68,14 +68,14 @@ export default async function SearchPage({
       )}
       <ul className="flex flex-col gap-3">
         {((data as SearchResult[] | null) ?? []).map((r) => (
-          <li key={r.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between">
-            <div>
+          <li key={r.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between gap-4">
+            <Link href={`/profile/${r.entity_id}`} className="min-w-0 flex-1 hover:text-emerald-700">
               <p className="font-semibold text-ink-900 text-sm">{r.display_name}</p>
               <p className="text-xs text-ink-400">
                 {r.account_code} · {r.entity_type}
                 {r.distance_km != null ? ` · ${r.distance_km.toFixed(1)} km away` : ""}
               </p>
-            </div>
+            </Link>
             <div className="flex items-center gap-1.5">
               {r.is_verified && (
                 <span className="text-[10px] font-semibold bg-emerald-100 text-emerald-700 px-2 py-1 rounded-full">
@@ -87,6 +87,7 @@ export default async function SearchPage({
                   Featured
                 </span>
               )}
+              <Link href={`/profile/${r.entity_id}`} className="rounded-lg border border-emerald-900 px-3 py-2 text-xs font-semibold text-emerald-900">View profile</Link>
             </div>
           </li>
         ))}

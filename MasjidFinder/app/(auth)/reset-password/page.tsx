@@ -1,0 +1,13 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+
+export default function ResetPasswordPage() {
+  const router = useRouter(); const supabase = createClient();
+  const [password, setPassword] = useState(""); const [confirmPassword, setConfirmPassword] = useState(""); const [ready, setReady] = useState(false); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null); const [message, setMessage] = useState<string | null>(null);
+  useEffect(() => { supabase.auth.getSession().then(({ data }) => setReady(Boolean(data.session))); }, [supabase.auth]);
+  async function updatePassword(event: React.FormEvent) { event.preventDefault(); setError(null); if (!ready) { setError("Open this page from the password reset email."); return; } if (password.length < 8 || password !== confirmPassword) { setError("Use at least 8 characters and make both passwords match."); return; } setBusy(true); const { error: authError } = await supabase.auth.updateUser({ password }); setBusy(false); if (authError) setError(authError.message); else { setMessage("Password updated. Redirecting to login…"); await supabase.auth.signOut(); setTimeout(() => router.replace("/login"), 900); } }
+  return <main className="min-h-screen bg-sand-50 flex items-center justify-center p-6"><form onSubmit={updatePassword} className="w-full max-w-sm bg-white rounded-2xl border border-black/10 p-6"><h1 className="text-lg font-semibold text-emerald-900 mb-1">Set a new password</h1><p className="text-sm text-ink-400 mb-5">Choose a new password for your MasjidFinder account.</p>{error && <p role="alert" className="mb-4 text-sm text-red-700">{error}</p>}{message && <p role="status" className="mb-4 text-sm text-emerald-700">{message}</p>}<input required minLength={8} type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="New password" className="w-full border rounded-lg p-3 text-sm mb-3" /><input required minLength={8} type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} placeholder="Confirm new password" className="w-full border rounded-lg p-3 text-sm mb-3" /><button disabled={busy} className="w-full bg-emerald-900 text-white rounded-lg py-3 font-semibold disabled:opacity-50">{busy ? "Updating…" : "Set new password"}</button></form></main>;
+}

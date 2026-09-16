@@ -17,6 +17,8 @@ export default function LoginPage() {
 
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(params.get("error"));
@@ -38,6 +40,23 @@ export default function LoginPage() {
       setBusy(false);
       setError(authError.message);
     }
+  }
+
+  async function loginWithPassword() {
+    setError(null);
+    if (!email.trim() || password.length < 8) {
+      setError("Enter a valid email and a password of at least 8 characters.");
+      return;
+    }
+    setBusy(true);
+    const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+    setBusy(false);
+    if (authError) {
+      setError(authError.message.includes("Email not confirmed") ? "Please confirm your email before logging in." : "Email or password is incorrect.");
+      return;
+    }
+    const { data: profile } = await supabase.from("profiles").select("id").eq("id", data.user.id).maybeSingle();
+    router.push(profile ? (params.get("redirect") || "/dashboard") : "/signup?resume=1");
   }
 
   async function sendOtp() {
@@ -108,6 +127,11 @@ export default function LoginPage() {
         >
           {busy ? "Opening Google…" : "Continue with Google"}
         </button>
+        <div className="my-5 flex items-center gap-3 text-xs text-ink-400"><span className="h-px flex-1 bg-black/10" />Email and password<span className="h-px flex-1 bg-black/10" /></div>
+        <input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Email address" autoComplete="email" className="w-full border border-black/10 rounded-lg px-3 py-3 text-sm mb-3 outline-none focus:border-emerald-600" />
+        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Password" autoComplete="current-password" className="w-full border border-black/10 rounded-lg px-3 py-3 text-sm mb-2 outline-none focus:border-emerald-600" />
+        <button disabled={busy} onClick={loginWithPassword} className="w-full bg-emerald-900 text-white rounded-lg py-3 font-semibold text-sm disabled:opacity-50">{busy ? "Logging in…" : "Log in with email"}</button>
+        <a href="/forgot-password" className="block text-right text-xs text-emerald-700 font-semibold mt-3">Forgot Password?</a>
         <p className="text-xs text-ink-400 mb-3">Phone OTP fallback</p>
         {step === "phone" ? (
           <>

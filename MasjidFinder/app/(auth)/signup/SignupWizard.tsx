@@ -1,485 +1,75 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocationCascade } from "@/lib/hooks/useLocationCascade";
-import { validateInternationalPhone } from "@/lib/validation/phone";
 
-type AccountType = "imam" | "hafiz_qari" | "moulvi_scholar" | "teacher" | "masjid" | "madrasa" | "event_organizer";
-type RoleType =
-  | "masjid_for_taraweeh" | "hafiz_qari_for_taraweeh" | "masjid_for_imam" | "imam_for_masjid"
-  | "teacher_for_madrasa" | "madrasa_for_teacher" | "moulvi_for_events" | "moulvi_for_nikah";
-
-const ACCOUNT_TYPES: { value: AccountType; label: string; institutional?: boolean }[] = [
-  { value: "imam", label: "Imam" },
-  { value: "hafiz_qari", label: "Hafiz / Qari" },
-  { value: "moulvi_scholar", label: "Moulvi / Scholar" },
-  { value: "teacher", label: "Teacher" },
-  { value: "masjid", label: "Masjid", institutional: true },
-  { value: "madrasa", label: "Madrasa", institutional: true },
-  { value: "event_organizer", label: "Event Organizer", institutional: true },
-];
-
-// Individual-role checkboxes shown once account types are picked — this is
-// what lets one person be Hafiz + Qari + Imam + Teacher + Moulvi on ONE
-// account, satisfying the "one account, multiple roles" requirement.
-const ROLE_OPTIONS_BY_ACCOUNT_TYPE: Record<string, { value: RoleType; label: string }[]> = {
-  imam: [{ value: "imam_for_masjid", label: "Imam For Masjid" }],
-  hafiz_qari: [{ value: "hafiz_qari_for_taraweeh", label: "Hafiz/Qari For Taraweeh" }],
-  teacher: [{ value: "madrasa_for_teacher", label: "Teacher For Madrasa" }],
-  moulvi_scholar: [
-    { value: "moulvi_for_events", label: "Scholar For Islamic Events" },
-    { value: "moulvi_for_nikah", label: "Moulvi For Nikah" },
-  ],
-};
-
-type Step = "account_type" | "roles" | "profile" | "location" | "phone" | "otp" | "done";
-
-const RESEND_SECONDS = 30;
+type AccountType = "imam" | "masjid" | "madrasa";
+type Step = "account" | "details" | "location" | "saving" | "done";
+const firqahs = ["sunni_hanafi", "sunni_shafii", "sunni_maliki", "sunni_hanbali", "salafi_ahle_hadith", "shia", "other", "prefer_not_to_say"];
+const firqahLabels: Record<string, string> = { sunni_hanafi: "Sunni Hanafi", sunni_shafii: "Sunni Shafii", sunni_maliki: "Sunni Maliki", sunni_hanbali: "Sunni Hanbali", salafi_ahle_hadith: "Salafi / Ahle Hadith", shia: "Shia", other: "Other", prefer_not_to_say: "Prefer not to say" };
+const qualifications = ["hafiz", "qari", "aalim", "mufti", "imam", "teacher", "moulvi", "other"];
+const qualificationLabels: Record<string, string> = { hafiz: "Hafiz", qari: "Qari", aalim: "Aalim", mufti: "Mufti", imam: "Imam", teacher: "Teacher", moulvi: "Moulvi", other: "Other" };
+const imamRoles = [["imam_for_masjid", "Imam for Masjid"], ["hafiz_qari_for_taraweeh", "Hafiz/Qari for Taraweeh"], ["moulvi_for_nikah", "Moulvi for Nikah"], ["teacher_for_madrasa", "Teacher for Madarsa"], ["moulvi_for_events", "Scholar/Moulvi for Islamic Events/Jalsa"]] as const;
 
 export default function SignupWizard() {
   const router = useRouter();
-  const supabase = createClient() as any;
-  const { countries, states, cities, loadingCountries, loadingStates, loadingCities, loadStates, loadCities } =
-    useLocationCascade();
+  const supabase = useMemo(() => createClient() as any, []);
+  const { countries, states, cities, loadingCountries, loadingStates, loadingCities, loadStates, loadCities } = useLocationCascade();
+  const [step, setStep] = useState<Step>("account");
+  const [userId, setUserId] = useState<string | null>(null);
+  const [accountType, setAccountType] = useState<AccountType | null>(null);
+  const [fullName, setFullName] = useState(""); const [age, setAge] = useState(""); const [firqah, setFirqah] = useState(""); const [address, setAddress] = useState(""); const [profilePictureUrl, setProfilePictureUrl] = useState(""); const [qualification, setQualification] = useState(""); const [qualificationCustom, setQualificationCustom] = useState(""); const [selectedRoles, setSelectedRoles] = useState<string[]>([]);
+  const [pictureFile, setPictureFile] = useState<File | null>(null); const [recitationFile, setRecitationFile] = useState<File | null>(null);
+  const [countryId, setCountryId] = useState(""); const [stateId, setStateId] = useState(""); const [cityId, setCityId] = useState(""); const [masjidName, setMasjidName] = useState(""); const [representativeName, setRepresentativeName] = useState(""); const [masjidPurpose, setMasjidPurpose] = useState(""); const [madrasaName, setMadrasaName] = useState(""); const [holderName, setHolderName] = useState(""); const [teacherType, setTeacherType] = useState(""); const [teacherTypeCustom, setTeacherTypeCustom] = useState(""); const [salary, setSalary] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
+  useEffect(() => { supabase.auth.getUser().then(({ data }: any) => setUserId(data.user?.id ?? null)); }, [supabase.auth]);
+  const selectedCountry = useMemo(() => countries.find((country) => country.id === countryId), [countries, countryId]);
 
-  const [step, setStep] = useState<Step>("account_type");
-  const [accountTypes, setAccountTypes] = useState<Set<AccountType>>(new Set());
-  const [roles, setRoles] = useState<Set<RoleType>>(new Set());
-  const [fullName, setFullName] = useState("");
-  const [countryId, setCountryId] = useState("");
-  const [stateId, setStateId] = useState("");
-  const [cityId, setCityId] = useState("");
-  const [referralCode, setReferralCode] = useState("");
-  const [rawPhone, setRawPhone] = useState("");
-  const [otp, setOtp] = useState("");
-  const [otpSentAt, setOtpSentAt] = useState<number | null>(null);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const selectedCountry = useMemo(() => countries.find((c) => c.id === countryId), [countries, countryId]);
-  const hasInstitutionalType = useMemo(
-    () => [...accountTypes].some((t) => ACCOUNT_TYPES.find((a) => a.value === t)?.institutional),
-    [accountTypes]
-  );
-  const availableRoleOptions = useMemo(() => {
-    const opts: { value: RoleType; label: string }[] = [];
-    for (const t of accountTypes) {
-      for (const r of ROLE_OPTIONS_BY_ACCOUNT_TYPE[t] ?? []) opts.push(r);
-    }
-    return opts;
-  }, [accountTypes]);
-
-  function toggleAccountType(t: AccountType) {
-    setAccountTypes((prev) => {
-      const next = new Set(prev);
-      next.has(t) ? next.delete(t) : next.add(t);
-      return next;
-    });
+  async function startGoogle() {
+    setError(null); setBusy(true);
+    const { error: authError } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo: `${window.location.origin}/auth/callback` } });
+    if (authError) { setBusy(false); setError(authError.message); }
   }
-  function toggleRole(r: RoleType) {
-    setRoles((prev) => {
-      const next = new Set(prev);
-      next.has(r) ? next.delete(r) : next.add(r);
-      return next;
-    });
-  }
-
-  async function onCountryChange(id: string) {
-    setCountryId(id);
-    setStateId("");
-    setCityId("");
-    await loadStates(id || null);
-  }
-  async function onStateChange(id: string) {
-    setStateId(id);
-    setCityId("");
-    await loadCities(countryId || null, id || null);
-  }
-
-  function startResendTimer() {
-    setResendCooldown(RESEND_SECONDS);
-    const interval = setInterval(() => {
-      setResendCooldown((s) => {
-        if (s <= 1) {
-          clearInterval(interval);
-          return 0;
-        }
-        return s - 1;
-      });
-    }, 1000);
-  }
-
-  async function sendOtp() {
-    setError(null);
-    const phoneCheck = validateInternationalPhone(rawPhone, selectedCountry?.iso2 ?? "");
-    if (!phoneCheck.valid || !phoneCheck.e164) {
-      setError(phoneCheck.error ?? "Invalid phone number.");
-      return;
-    }
-    setBusy(true);
-    // REAL Supabase phone-OTP call. If no SMS provider is configured in the
-    // Supabase dashboard (Authentication > Providers > Phone), this fails
-    // with a real error surfaced below — it never pretends to succeed.
-    const { error: otpError } = await supabase.auth.signInWithOtp({ phone: phoneCheck.e164 });
-    setBusy(false);
-    if (otpError) {
-      if (otpError.message?.toLowerCase().includes("rate limit")) {
-        setError("Too many attempts. Please wait a few minutes before requesting another code.");
-      } else {
-        setError(`Could not send OTP: ${otpError.message}`);
+  function toggleRole(role: string) { setSelectedRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role]); }
+  async function saveProfile() {
+    if (!userId || !accountType) { setError("Please continue with Google first."); return; }
+    setError(null); setBusy(true); setStep("saving");
+    const profile = { full_name: accountType === "imam" ? fullName : accountType === "masjid" ? representativeName : holderName, age, address, country_id: countryId, state_id: stateId, city_id: cityId, firqah, profile_picture_url: profilePictureUrl };
+    const masjid = accountType === "masjid" ? { masjid_name: masjidName, address, representative_name: representativeName, firqah, purpose: masjidPurpose } : null;
+    const madrasa = accountType === "madrasa" ? { madrasa_name: madrasaName, holder_name: holderName, address, required_teacher_type: teacherType, required_teacher_type_custom: teacherTypeCustom, salary } : null;
+    const { error: saveError } = await supabase.rpc("complete_google_profile", { p_account_type: accountType, p_profile: profile, p_roles: accountType === "imam" ? selectedRoles : [], p_qualification: accountType === "imam" ? qualification || null : null, p_qualification_custom: qualificationCustom, p_masjid: masjid, p_madrasa: madrasa });
+    if (saveError) { setBusy(false); setStep("details"); setError(saveError.message); return; }
+    if (accountType === "imam" && pictureFile) {
+      const path = `${userId}/${crypto.randomUUID()}-${pictureFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("profile-pictures").upload(path, pictureFile, { upsert: false });
+      if (!uploadError) {
+        const { data: publicImage } = supabase.storage.from("profile-pictures").getPublicUrl(path);
+        await supabase.from("profiles").update({ profile_picture_url: publicImage.publicUrl }).eq("id", userId);
       }
-      return;
     }
-    setOtpSentAt(Date.now());
-    startResendTimer();
-    setStep("otp");
-  }
-
-  async function verifyOtp() {
-    setError(null);
-    if (!otp || otp.trim().length < 4) {
-      setError("Enter the code we sent you.");
-      return;
+    if (accountType === "imam" && recitationFile) {
+      const path = `${userId}/${crypto.randomUUID()}-${recitationFile.name}`;
+      const { error: uploadError } = await supabase.storage.from("recitations").upload(path, recitationFile, { upsert: false });
+      if (!uploadError) await supabase.from("recitation_files").insert({ profile_id: userId, storage_path: path, mime_type: recitationFile.type || null });
     }
-    const phoneCheck = validateInternationalPhone(rawPhone, selectedCountry?.iso2 ?? "");
-    if (!phoneCheck.e164) {
-      setError("Something went wrong with the phone number — go back and re-enter it.");
-      return;
-    }
-    setBusy(true);
-    const { data, error: verifyError } = await supabase.auth.verifyOtp({
-      phone: phoneCheck.e164,
-      token: otp.trim(),
-      type: "sms",
-    });
-    if (verifyError) {
-      setBusy(false);
-      if (verifyError.message?.toLowerCase().includes("expired")) {
-        setError("That code has expired. Request a new one.");
-      } else {
-        setError("Incorrect code. Please try again.");
-      }
-      return;
-    }
-    if (!data.user) {
-      setBusy(false);
-      setError("Verification succeeded but no session was returned. Please try logging in.");
-      return;
-    }
-
-    // Duplicate-account guard: if a profile already exists for this auth
-    // user (e.g. they previously completed signup and are re-verifying),
-    // send them straight to their dashboard instead of re-creating a row.
-    const { data: existingProfile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("id", data.user.id)
-      .maybeSingle();
-
-    if (existingProfile) {
-      setBusy(false);
-      router.push("/dashboard");
-      return;
-    }
-
-    const { error: profileError } = await supabase.from("profiles").insert({
-      id: data.user.id,
-      full_name: fullName.trim(),
-      country_id: countryId,
-      state_id: stateId || null,
-      city_id: cityId || null,
-      phone_e164: phoneCheck.e164,
-      phone_country_id: countryId,
-      phone_verified: true,
-    });
-
-    if (profileError) {
-      setBusy(false);
-      // Network/DB errors surface honestly rather than a fake "success" screen.
-      setError(`Your phone is verified, but we could not finish creating your profile: ${profileError.message}. Please retry.`);
-      return;
-    }
-
-    if (accountTypes.size > 0) {
-      await supabase.from("profile_account_types").insert(
-        [...accountTypes].map((account_type) => ({ profile_id: data.user!.id, account_type }))
-      );
-    }
-    if (roles.size > 0) {
-      await supabase.from("profile_roles").insert(
-        [...roles].map((role) => ({ profile_id: data.user!.id, role }))
-      );
-    }
-    if (referralCode.trim().length > 0) {
-      await supabase.rpc("fn_apply_referral", {
-        p_referred_id: data.user.id,
-        p_referral_code: referralCode.trim(),
-      });
-    }
-
     setBusy(false);
-    setStep("done");
-    setTimeout(() => {
-      router.push(hasInstitutionalType ? "/dashboard/institutions/new" : "/dashboard");
-    }, 1200);
+    setStep("done"); setTimeout(() => router.push("/dashboard"), 700);
   }
+  const commonValid = (accountType === "imam" ? fullName.trim().length >= 2 : accountType === "masjid" ? representativeName.trim().length >= 2 : holderName.trim().length >= 2) && countryId && address.trim().length >= 3 && firqah;
+  const detailsValid = accountType === "imam" ? Boolean(commonValid && age && qualification && (qualification !== "other" || qualificationCustom.trim()) && selectedRoles.length) : accountType === "masjid" ? Boolean(commonValid && masjidName && representativeName && masjidPurpose) : Boolean(commonValid && madrasaName && holderName && teacherType && (teacherType !== "other" || teacherTypeCustom.trim()));
 
-  return (
-    <div className="max-w-lg mx-auto p-6">
-      <StepIndicator step={step} />
-
-      {error && (
-        <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm p-3">
-          {error}
-        </div>
-      )}
-
-      {step === "account_type" && (
-        <section>
-          <h2 className="text-lg font-semibold text-emerald-900 mb-1">What type of account are you creating?</h2>
-          <p className="text-sm text-ink-400 mb-4">Select all that apply — one account can hold multiple roles.</p>
-          <div className="grid grid-cols-2 gap-2">
-            {ACCOUNT_TYPES.map((t) => (
-              <button
-                key={t.value}
-                type="button"
-                onClick={() => toggleAccountType(t.value)}
-                aria-pressed={accountTypes.has(t.value)}
-                className={`border rounded-lg p-3 text-sm text-left transition ${
-                  accountTypes.has(t.value)
-                    ? "border-emerald-600 bg-emerald-100 text-emerald-900 font-semibold"
-                    : "border-gray-200 text-ink-600"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <button
-            disabled={accountTypes.size === 0}
-            onClick={() => setStep(availableRoleOptions.length > 0 ? "roles" : "profile")}
-            className="mt-6 w-full rounded-lg bg-emerald-900 text-white font-semibold py-3 disabled:opacity-40"
-          >
-            Continue
-          </button>
-        </section>
-      )}
-
-      {step === "roles" && (
-        <section>
-          <h2 className="text-lg font-semibold text-emerald-900 mb-1">Your specific roles</h2>
-          <p className="text-sm text-ink-400 mb-4">
-            Select every role you offer — e.g. Hafiz/Qari + Imam + Teacher can all live on one profile.
-          </p>
-          <div className="flex flex-col gap-2">
-            {availableRoleOptions.map((r) => (
-              <label key={r.value} className="flex items-center gap-3 border rounded-lg p-3 text-sm">
-                <input type="checkbox" checked={roles.has(r.value)} onChange={() => toggleRole(r.value)} />
-                {r.label}
-              </label>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-6">
-            <button onClick={() => setStep("account_type")} className="flex-1 rounded-lg border py-3 font-semibold">
-              Back
-            </button>
-            <button onClick={() => setStep("profile")} className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold">
-              Continue
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === "profile" && (
-        <section>
-          <h2 className="text-lg font-semibold text-emerald-900 mb-4">Your name</h2>
-          <input
-            value={fullName}
-            onChange={(e) => setFullName(e.target.value)}
-            placeholder="Full name"
-            className="w-full border rounded-lg p-3 text-sm mb-6"
-          />
-          <div className="flex gap-2">
-            <button onClick={() => setStep(availableRoleOptions.length > 0 ? "roles" : "account_type")} className="flex-1 rounded-lg border py-3 font-semibold">
-              Back
-            </button>
-            <button
-              disabled={fullName.trim().length < 2}
-              onClick={() => setStep("location")}
-              className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold disabled:opacity-40"
-            >
-              Continue
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === "location" && (
-        <section>
-          <h2 className="text-lg font-semibold text-emerald-900 mb-1">Where are you based?</h2>
-          <p className="text-sm text-ink-400 mb-4">Every country works the same way here — nothing is India-only.</p>
-
-          <label className="text-xs font-semibold text-ink-600">Country</label>
-          <select
-            value={countryId}
-            onChange={(e) => onCountryChange(e.target.value)}
-            disabled={loadingCountries}
-            className="w-full border rounded-lg p-3 text-sm mb-3"
-          >
-            <option value="">{loadingCountries ? "Loading countries…" : "Select country"}</option>
-            {countries.map((c) => (
-              <option key={c.id} value={c.id}>
-                {c.flag_emoji} {c.name}
-              </option>
-            ))}
-          </select>
-
-          {states.length > 0 && (
-            <>
-              <label className="text-xs font-semibold text-ink-600">State / Province</label>
-              <select
-                value={stateId}
-                onChange={(e) => onStateChange(e.target.value)}
-                disabled={loadingStates}
-                className="w-full border rounded-lg p-3 text-sm mb-3"
-              >
-                <option value="">{loadingStates ? "Loading…" : "Select state / province"}</option>
-                {states.map((s) => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </>
-          )}
-
-          {cities.length > 0 && (
-            <>
-              <label className="text-xs font-semibold text-ink-600">City</label>
-              <select
-                value={cityId}
-                onChange={(e) => setCityId(e.target.value)}
-                disabled={loadingCities}
-                className="w-full border rounded-lg p-3 text-sm mb-3"
-              >
-                <option value="">{loadingCities ? "Loading…" : "Select city"}</option>
-                {cities.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </>
-          )}
-
-          <label className="text-xs font-semibold text-ink-600">Referral code (optional)</label>
-          <input
-            value={referralCode}
-            onChange={(e) => setReferralCode(e.target.value)}
-            placeholder="e.g. AB12CD34"
-            className="w-full border rounded-lg p-3 text-sm mb-6 uppercase"
-          />
-
-          <div className="flex gap-2">
-            <button onClick={() => setStep("profile")} className="flex-1 rounded-lg border py-3 font-semibold">
-              Back
-            </button>
-            <button
-              disabled={!countryId}
-              onClick={() => setStep("phone")}
-              className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold disabled:opacity-40"
-            >
-              Continue
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === "phone" && (
-        <section>
-          <h2 className="text-lg font-semibold text-emerald-900 mb-1">Verify your phone number</h2>
-          <p className="text-sm text-ink-400 mb-4">We&apos;ll text you a one-time code.</p>
-          <div className="flex gap-2 mb-6">
-            <div className="border rounded-lg p-3 text-sm bg-gray-50 text-ink-600 whitespace-nowrap">
-              {selectedCountry?.calling_code ?? "+--"}
-            </div>
-            <input
-              value={rawPhone}
-              onChange={(e) => setRawPhone(e.target.value)}
-              placeholder="Phone number"
-              inputMode="tel"
-              className="flex-1 border rounded-lg p-3 text-sm"
-            />
-          </div>
-          <div className="flex gap-2">
-            <button onClick={() => setStep("location")} className="flex-1 rounded-lg border py-3 font-semibold">
-              Back
-            </button>
-            <button
-              disabled={busy || !rawPhone}
-              onClick={sendOtp}
-              className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold disabled:opacity-40"
-            >
-              {busy ? "Sending…" : "Send code"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === "otp" && (
-        <section>
-          <h2 className="text-lg font-semibold text-emerald-900 mb-1">Enter the code</h2>
-          <p className="text-sm text-ink-400 mb-4">
-            Sent to {selectedCountry?.calling_code} {rawPhone}
-          </p>
-          <input
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
-            placeholder="6-digit code"
-            inputMode="numeric"
-            maxLength={8}
-            className="w-full border rounded-lg p-3 text-sm mb-3 tracking-widest text-center text-lg"
-          />
-          <button
-            disabled={resendCooldown > 0 || busy}
-            onClick={sendOtp}
-            className="text-sm text-emerald-700 font-semibold mb-6 disabled:text-ink-400"
-          >
-            {resendCooldown > 0 ? `Resend code in ${resendCooldown}s` : "Resend code"}
-          </button>
-          <div className="flex gap-2">
-            <button onClick={() => setStep("phone")} className="flex-1 rounded-lg border py-3 font-semibold">
-              Back
-            </button>
-            <button
-              disabled={busy}
-              onClick={verifyOtp}
-              className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold disabled:opacity-40"
-            >
-              {busy ? "Verifying…" : "Verify & Create Account"}
-            </button>
-          </div>
-        </section>
-      )}
-
-      {step === "done" && (
-        <section className="text-center py-10">
-          <p className="text-emerald-900 font-semibold text-lg">Account created 🎉</p>
-          <p className="text-sm text-ink-400 mt-1">Taking you to your dashboard…</p>
-        </section>
-      )}
-    </div>
-  );
+  return <div className="max-w-lg mx-auto p-6">
+    <div className="flex gap-1 mb-6">{["account", "details", "location"].map((item, index) => <div key={item} className={`h-1 flex-1 rounded-full ${["account", "details", "location"].indexOf(step) >= index ? "bg-emerald-700" : "bg-gray-200"}`} />)}</div>
+    {error && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm p-3">{error}</div>}
+    {!userId && <section className="rounded-xl border border-emerald-900/15 bg-white p-5"><h1 className="text-xl font-semibold text-emerald-900">Create your MasjidFinder account</h1><p className="text-sm text-ink-400 mt-1 mb-5">Google provides your email securely. We will ask only for your MasjidFinder profile details next.</p><button disabled={busy} onClick={startGoogle} className="w-full border border-black/15 rounded-lg py-3 font-semibold disabled:opacity-50">{busy ? "Opening Google…" : "Continue with Google"}</button></section>}
+    {userId && step === "account" && <section><h2 className="text-lg font-semibold text-emerald-900 mb-1">Choose your account type</h2><p className="text-sm text-ink-400 mb-4">Select the profile you want to create.</p><div className="grid grid-cols-3 gap-2">{(["masjid", "imam", "madrasa"] as AccountType[]).map((type) => <button key={type} type="button" onClick={() => setAccountType(type)} className={`border rounded-lg p-4 text-sm capitalize ${accountType === type ? "border-emerald-600 bg-emerald-100 text-emerald-900 font-semibold" : "border-gray-200"}`}>{type}</button>)}</div><button disabled={!accountType} onClick={() => setStep("details")} className="mt-6 w-full rounded-lg bg-emerald-900 text-white font-semibold py-3 disabled:opacity-40">Next</button></section>}
+    {userId && step === "details" && <section><h2 className="text-lg font-semibold text-emerald-900 mb-4">{accountType === "imam" ? "Imam profile" : accountType === "masjid" ? "Masjid details" : "Madarsa details"}</h2>{accountType === "imam" ? <><Input label="Full Name *" value={fullName} setValue={setFullName} /><Input label="Age *" type="number" value={age} setValue={setAge} /><Select label="Firqah / Maslak *" value={firqah} setValue={setFirqah} options={firqahs.map((value) => ({ value, label: firqahLabels[value] }))} /><Input label="Address *" value={address} setValue={setAddress} /><FileInput label="Profile picture (optional)" accept="image/jpeg,image/png,image/webp" setFile={setPictureFile} /><Select label="Qualification *" value={qualification} setValue={setQualification} options={qualifications.map((value) => ({ value, label: qualificationLabels[value] }))} />{qualification === "other" && <Input label="Qualification (manual) *" value={qualificationCustom} setValue={setQualificationCustom} />}<FileInput label="Quran recitation / voice file (optional)" accept="audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/wav" setFile={setRecitationFile} /><fieldset className="mb-4"><legend className="text-xs font-semibold text-ink-600 mb-2">Services / Roles *</legend>{imamRoles.map(([role, label]) => <label key={role} className="flex items-center gap-2 text-sm mb-2"><input type="checkbox" checked={selectedRoles.includes(role)} onChange={() => toggleRole(role)} />{label}</label>)}</fieldset></> : accountType === "masjid" ? <><Input label="Masjid Name *" value={masjidName} setValue={setMasjidName} /><Input label="Holder / Committee Representative Name *" value={representativeName} setValue={setRepresentativeName} /><Select label="Firqah / Maslak *" value={firqah} setValue={setFirqah} options={firqahs.map((value) => ({ value, label: firqahLabels[value] }))} /><Input label="Address *" value={address} setValue={setAddress} /><Select label="Purpose *" value={masjidPurpose} setValue={setMasjidPurpose} options={[{ value: "masjid_for_imam", label: "Imam Required" }, { value: "masjid_for_taraweeh", label: "Taraweeh Hafiz/Qari Required" }, { value: "both", label: "Both" }]} /></> : <><Input label="Madarsa Name *" value={madrasaName} setValue={setMadrasaName} /><Input label="Holder / Representative Name *" value={holderName} setValue={setHolderName} /><Input label="Address *" value={address} setValue={setAddress} /><Select label="Required Post / Teacher Type *" value={teacherType} setValue={setTeacherType} options={[{ value: "hifz", label: "Hafiz" }, { value: "aalim_moulana", label: "Moulana / Aalim" }, { value: "islamic_studies", label: "Deeni Teacher" }, { value: "general_subject", label: "Dunyavi / Academic Teacher" }, { value: "other", label: "Other" }]} />{teacherType === "other" && <Input label="Teacher type (manual) *" value={teacherTypeCustom} setValue={setTeacherTypeCustom} />}<Input label="Salary (optional)" value={salary} setValue={setSalary} /></>}<div className="flex gap-2 mt-6"><button onClick={() => setStep("account")} className="flex-1 rounded-lg border py-3 font-semibold">Back</button><button disabled={!detailsValid} onClick={() => setStep("location")} className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold disabled:opacity-40">Next</button></div></section>}
+    {userId && step === "location" && <section><h2 className="text-lg font-semibold text-emerald-900 mb-4">Location</h2><Select label="Country *" value={countryId} setValue={async (value) => { setCountryId(value); setStateId(""); setCityId(""); await loadStates(value || null); }} options={countries.map((country) => ({ value: country.id, label: `${country.flag_emoji} ${country.name}` }))} disabled={loadingCountries} /><Select label="State / Province" value={stateId} setValue={async (value) => { setStateId(value); setCityId(""); await loadCities(countryId || null, value || null); }} options={states.map((state) => ({ value: state.id, label: state.name }))} disabled={loadingStates || !countryId} /><Select label="City" value={cityId} setValue={setCityId} options={cities.map((city) => ({ value: city.id, label: city.name }))} disabled={loadingCities || !stateId} /><p className="text-xs text-ink-400 mb-5">{selectedCountry ? `Selected country: ${selectedCountry.name}` : "Choose your country and available region."}</p><div className="flex gap-2"><button onClick={() => setStep("details")} className="flex-1 rounded-lg border py-3 font-semibold">Back</button><button disabled={!countryId || busy} onClick={saveProfile} className="flex-1 rounded-lg bg-emerald-900 text-white py-3 font-semibold disabled:opacity-40">{busy ? "Saving…" : "Save profile"}</button></div></section>}
+    {step === "saving" && <p className="text-center text-emerald-900 py-10">Saving your profile…</p>}{step === "done" && <p className="text-center text-emerald-900 py-10 font-semibold">Account ready. Taking you to your dashboard…</p>}
+  </div>;
 }
 
-function StepIndicator({ step }: { step: Step }) {
-  const steps: Step[] = ["account_type", "roles", "profile", "location", "phone", "otp"];
-  const idx = steps.indexOf(step);
-  if (idx === -1) return null;
-  return (
-    <div className="flex gap-1 mb-6">
-      {steps.map((s, i) => (
-        <div key={s} className={`h-1 flex-1 rounded-full ${i <= idx ? "bg-emerald-700" : "bg-gray-200"}`} />
-      ))}
-    </div>
-  );
-}
+function Input({ label, value, setValue, type = "text" }: { label: string; value: string; setValue: (value: string) => void; type?: string }) { return <label className="block mb-3 text-xs font-semibold text-ink-600">{label}<input type={type} value={value} onChange={(event) => setValue(event.target.value)} className="mt-1 w-full border rounded-lg p-3 text-sm font-normal" /></label>; }
+function FileInput({ label, accept, setFile }: { label: string; accept: string; setFile: (file: File | null) => void }) { return <label className="block mb-3 text-xs font-semibold text-ink-600">{label}<input type="file" accept={accept} onChange={(event) => setFile(event.target.files?.[0] ?? null)} className="mt-1 w-full border rounded-lg p-3 text-sm font-normal" /></label>; }
+function Select({ label, value, setValue, options, disabled = false }: { label: string; value: string; setValue: (value: string) => void | Promise<void>; options: { value: string; label: string }[]; disabled?: boolean }) { return <label className="block mb-3 text-xs font-semibold text-ink-600">{label}<select disabled={disabled} value={value} onChange={(event) => void setValue(event.target.value)} className="mt-1 w-full border rounded-lg p-3 text-sm font-normal"><option value="">{disabled ? "Loading…" : "Select"}</option>{options.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>; }

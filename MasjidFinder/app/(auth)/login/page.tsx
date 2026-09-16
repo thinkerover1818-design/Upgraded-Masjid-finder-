@@ -19,12 +19,25 @@ export default function LoginPage() {
   const [otp, setOtp] = useState("");
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(params.get("error"));
   const [cooldown, setCooldown] = useState(0);
 
   function startCooldown() {
     setCooldown(RESEND_SECONDS);
     const t = setInterval(() => setCooldown((s) => (s <= 1 ? (clearInterval(t), 0) : s - 1)), 1000);
+  }
+
+  async function continueWithGoogle() {
+    setError(null);
+    setBusy(true);
+    const { error: authError } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback`, queryParams: { prompt: "select_account" } },
+    });
+    if (authError) {
+      setBusy(false);
+      setError(authError.message);
+    }
   }
 
   async function sendOtp() {
@@ -84,10 +97,18 @@ export default function LoginPage() {
     <main className="min-h-screen bg-sand-50 flex items-center justify-center p-6">
       <div className="w-full max-w-sm bg-white rounded-2xl border border-black/10 p-6">
         <h1 className="text-lg font-semibold text-emerald-900 mb-1">Welcome back</h1>
-        <p className="text-sm text-ink-400 mb-5">Log in with your phone number — we&apos;ll send a one-time code.</p>
+        <p className="text-sm text-ink-400 mb-5">Use your Google account to continue to MasjidFinder.</p>
 
         {error && <div role="alert" className="mb-4 rounded-lg border border-red-200 bg-red-50 text-red-800 text-sm p-3">{error}</div>}
 
+        <button
+          disabled={busy}
+          onClick={continueWithGoogle}
+          className="w-full border border-black/15 rounded-lg py-3 font-semibold text-sm disabled:opacity-50 mb-5"
+        >
+          {busy ? "Opening Google…" : "Continue with Google"}
+        </button>
+        <p className="text-xs text-ink-400 mb-3">Phone OTP fallback</p>
         {step === "phone" ? (
           <>
             <input

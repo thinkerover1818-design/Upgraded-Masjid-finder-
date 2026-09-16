@@ -39,15 +39,15 @@ export default function SignupWizard() {
       return;
     }
     setBusy(true);
-    const { data, error: authError } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/auth/confirm` } });
+    const { data, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
     setBusy(false);
     if (authError) { setError(authError.message); return; }
     if (data.session?.user) { setUserId(data.session.user.id); return; }
-    setSuccess("Account created. Check your email to confirm it, then return here to complete your profile.");
+    setError("Account was created, but Supabase did not return a session. Disable email confirmations in the linked Supabase Auth settings, then try again.");
   }
   function toggleRole(role: string) { setSelectedRoles((current) => current.includes(role) ? current.filter((item) => item !== role) : [...current, role]); }
   async function saveProfile() {
-    if (!userId || !accountType) { setError("Please continue with Google first."); return; }
+    if (!userId || !accountType) { setError("Please sign in first, then choose an account type."); return; }
     setError(null); setBusy(true); setStep("saving");
     const profile = { full_name: accountType === "imam" ? fullName : accountType === "masjid" ? representativeName : holderName, age, address, country_id: countryId, state_id: stateId, city_id: cityId, firqah, profile_picture_url: profilePictureUrl };
     const masjid = accountType === "masjid" ? { masjid_name: masjidName, address, representative_name: representativeName, firqah, purpose: masjidPurpose } : null;

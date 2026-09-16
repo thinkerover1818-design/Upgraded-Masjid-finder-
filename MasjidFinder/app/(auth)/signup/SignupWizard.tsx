@@ -39,7 +39,7 @@ export default function SignupWizard() {
       return;
     }
     setBusy(true);
-    const { data, error: authError } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/auth/callback` } });
+    const { data, error: authError } = await supabase.auth.signUp({ email: email.trim(), password, options: { emailRedirectTo: `${window.location.origin}/auth/confirm` } });
     setBusy(false);
     if (authError) { setError(authError.message); return; }
     if (data.session?.user) { setUserId(data.session.user.id); return; }

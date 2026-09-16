@@ -70,7 +70,7 @@ export default function SignupWizard() {
     setBusy(false);
     setStep("done"); setTimeout(() => router.push("/dashboard"), 700);
   }
-  const commonValid = (accountType === "imam" ? fullName.trim().length >= 2 : accountType === "masjid" ? representativeName.trim().length >= 2 : holderName.trim().length >= 2) && countryId && address.trim().length >= 3 && firqah;
+  const commonValid = (accountType === "imam" ? fullName.trim().length >= 2 : accountType === "masjid" ? representativeName.trim().length >= 2 : holderName.trim().length >= 2) && address.trim().length >= 3 && firqah;
   const detailsValid = accountType === "imam" ? Boolean(commonValid && age && qualification && (qualification !== "other" || qualificationCustom.trim()) && selectedRoles.length) : accountType === "masjid" ? Boolean(commonValid && masjidName && representativeName && masjidPurpose) : Boolean(commonValid && madrasaName && holderName && teacherType && (teacherType !== "other" || teacherTypeCustom.trim()));
 
   return <div className="max-w-lg mx-auto p-6">

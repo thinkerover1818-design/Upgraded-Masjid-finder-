@@ -24,3 +24,15 @@ export async function POST(request: NextRequest) {
   if (error) return NextResponse.json({ error: error.message }, { status: 400 });
   return NextResponse.json({ message: data });
 }
+
+export async function PATCH(request: NextRequest) {
+  const supabase = createClient() as any;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  const conversationId = typeof body?.conversationId === "string" ? body.conversationId : "";
+  if (!conversationId) return NextResponse.json({ error: "Conversation is required." }, { status: 400 });
+  const { error } = await supabase.from("conversation_participants").update({ last_read_at: new Date().toISOString() }).eq("conversation_id", conversationId).eq("profile_id", user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  return NextResponse.json({ ok: true });
+}

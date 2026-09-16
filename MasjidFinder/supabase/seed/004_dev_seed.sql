@@ -23,6 +23,30 @@ insert into referral_reward_rules (reward_type, description, benefit) values
   ('boost_7d', 'Referrer gets a 7-day profile boost', '{"boost_score": 10, "boost_days": 7}')
 on conflict (reward_type) do nothing;
 
+-- Demo shop inventory is attached to the first local profile, when one exists.
+-- The conditional block keeps a clean database valid while making the catalog
+-- appear automatically after the normal CLI dev-account seed has run.
+do $$
+declare
+  v_profile_id uuid;
+  v_seller_id uuid;
+begin
+  select id into v_profile_id from profiles order by created_at limit 1;
+  if v_profile_id is not null then
+    insert into shop_sellers (profile_id, is_approved)
+      values (v_profile_id, true)
+      on conflict do nothing;
+    select id into v_seller_id from shop_sellers where profile_id = v_profile_id limit 1;
+    if v_seller_id is not null then
+      insert into shop_products (seller_id, name, description, price, currency, stock, category, is_global)
+      values
+        (v_seller_id, '[DEMO] Pocket Quran', 'A compact Quran for everyday carry.', 12, 'USD', 25, 'books', true),
+        (v_seller_id, '[DEMO] Prayer Mat', 'A simple, durable prayer mat.', 18, 'USD', 15, 'prayer', true)
+      on conflict do nothing;
+    end if;
+  end if;
+end $$;
+
 -- ---------------------------------------------------------------------------
 -- Demo auth users + profiles for local development only.
 -- Requires creating the corresponding auth.users rows first via the Supabase

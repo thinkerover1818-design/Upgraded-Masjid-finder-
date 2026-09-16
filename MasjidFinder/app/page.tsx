@@ -70,6 +70,14 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
           <span className="font-semibold text-emerald-900 text-lg">{data.platformName}</span>
           <nav className="flex items-center gap-2">
+            <Link href="/plans" className="hidden text-sm font-semibold text-emerald-900 sm:inline-block">
+              Plans
+            </Link>
+            {data.shopEnabled && (
+              <Link href="/shop" className="hidden text-sm font-semibold text-emerald-900 sm:inline-block">
+                Shop
+              </Link>
+            )}
             <Link href="/login" className="text-sm font-semibold px-4 py-2 rounded-lg border border-emerald-900 text-emerald-900">
               Log In
             </Link>
@@ -109,32 +117,31 @@ export default async function Home() {
       </section>
 
       <section className="max-w-5xl mx-auto px-4 py-4 flex flex-wrap gap-3 justify-center">
-        {/* Subscription plans and donations are fully modeled in the DB
-            (subscription_plans, purchase_enquiries, donations — all with
-            working RPCs) but the browse/purchase-enquiry UI screens aren't
-            built yet, so these are labeled honestly instead of linking to a
-            page that doesn't exist. */}
-        <span className="rounded-full border border-black/10 bg-sand-100 px-4 py-2 text-sm font-semibold text-ink-400">
-          Subscription & Boost Plans (backend ready, page coming soon)
-        </span>
+        <Link href="/plans" className="rounded-full border border-emerald-900 bg-white px-4 py-2 text-sm font-semibold text-emerald-900 hover:bg-emerald-50">
+          Subscription & Boost Plans
+        </Link>
         {data.donationsEnabled && (
           <span className="rounded-full border border-black/10 bg-sand-100 px-4 py-2 text-sm font-semibold text-ink-400">
             Donate (backend ready, page coming soon)
           </span>
         )}
-        <span
+        {data.shopEnabled ? <Link
+          href="/shop"
           className={`rounded-full border border-black/10 px-4 py-2 text-sm font-semibold ${
-            data.shopEnabled ? "bg-white text-emerald-900" : "bg-sand-100 text-ink-400"
+            "bg-white text-emerald-900 hover:bg-emerald-50"
           }`}
         >
-          Islamic Shop {data.shopEnabled ? "" : "(coming soon)"}
-        </span>
+          Islamic Shop
+        </Link> : <span className="rounded-full border border-black/10 bg-sand-100 px-4 py-2 text-sm font-semibold text-ink-400">Islamic Shop (currently unavailable)</span>}
       </section>
 
       <footer className="border-t border-black/5 mt-8">
-        <div className="max-w-5xl mx-auto px-4 py-6 text-xs text-ink-400">
+        <div className="max-w-5xl mx-auto flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-6 text-xs text-ink-400">
+          <Link href="/about" className="hover:text-emerald-800">About</Link><Link href="/how-it-works" className="hover:text-emerald-800">How it works</Link><Link href="/contact" className="hover:text-emerald-800">Contact</Link><Link href="/faq" className="hover:text-emerald-800">FAQ</Link><Link href="/privacy" className="hover:text-emerald-800">Privacy</Link><Link href="/terms" className="hover:text-emerald-800">Terms</Link>
+          <span className="basis-full">
           © {new Date().getFullYear()} {data.platformName}. Verification confirms admin document review only, not
           religious authority.
+          </span>
         </div>
       </footer>
     </div>

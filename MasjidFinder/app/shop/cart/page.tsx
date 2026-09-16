@@ -1,0 +1,17 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
+
+type CartItem = { id: string; name: string; price: number; currency: string; quantity: number };
+
+export default function CartPage() {
+  const [items, setItems] = useState<CartItem[]>([]);
+  const [form, setForm] = useState({ name: "", contact: "", address: "" });
+  const [message, setMessage] = useState("");
+  useEffect(() => { try { setItems(JSON.parse(localStorage.getItem("masjidfinder-cart") ?? "[]")); } catch { setItems([]); } }, []);
+  const total = useMemo(() => items.reduce((sum, item) => sum + Number(item.price) * item.quantity, 0), [items]);
+  function update(id: string, quantity: number) { const next = items.map((item) => item.id === id ? { ...item, quantity: Math.max(0, quantity) } : item).filter((item) => item.quantity); setItems(next); localStorage.setItem("masjidfinder-cart", JSON.stringify(next)); }
+  async function checkout(event: React.FormEvent) { event.preventDefault(); setMessage(""); const response = await fetch("/api/shop/orders", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ items: items.map(({ id, quantity }) => ({ productId: id, quantity })), ...form }) }); const result = await response.json().catch(() => ({})); if (!response.ok) { setMessage(result.error ?? "Could not place order."); return; } localStorage.removeItem("masjidfinder-cart"); setItems([]); setMessage(`Order ${result.orderId} received. We will contact you to confirm payment and delivery.`); }
+  return <main className="min-h-screen bg-sand-50 px-4 py-8 sm:px-6"><div className="mx-auto max-w-3xl"><Link href="/shop" className="text-sm font-semibold text-emerald-700">← Back to shop</Link><h1 className="mt-8 text-3xl font-semibold text-emerald-900">Your cart</h1>{message && <p className="mt-4 rounded-lg bg-emerald-50 p-4 text-sm text-emerald-800">{message}</p>}{!items.length ? <p className="mt-6 rounded-xl border border-black/10 bg-white p-6 text-sm text-ink-600">Your cart is empty.</p> : <div className="mt-6 grid gap-6 md:grid-cols-[1fr_20rem]"><section className="rounded-xl border border-black/10 bg-white p-4">{items.map((item) => <div key={item.id} className="flex items-center justify-between gap-3 border-b border-black/5 py-3"><div><p className="font-semibold text-emerald-900">{item.name}</p><p className="text-sm text-ink-600">{item.currency} {item.price}</p></div><input aria-label={`Quantity for ${item.name}`} type="number" min="0" value={item.quantity} onChange={(event) => update(item.id, Number(event.target.value))} className="w-16 rounded border px-2 py-1" /></div>)}<p className="mt-4 text-right font-semibold">Total: {items[0]?.currency} {total.toFixed(2)}</p></section><form onSubmit={checkout} className="rounded-xl border border-black/10 bg-white p-4"><h2 className="font-semibold text-emerald-900">Delivery details</h2>{([['name','Full name'],['contact','Phone or email'],['address','Delivery address']] as const).map(([key,label]) => <label key={key} className="mt-3 block text-xs font-semibold text-ink-600">{label}<input required value={form[key]} onChange={(event) => setForm({ ...form, [key]: event.target.value })} className="mt-1 w-full rounded-lg border border-black/10 px-3 py-2 text-sm" /></label>)}<button className="mt-5 w-full rounded-lg bg-emerald-900 px-4 py-3 text-sm font-semibold text-white">Place order</button></form></div>}</div></main>;
+}

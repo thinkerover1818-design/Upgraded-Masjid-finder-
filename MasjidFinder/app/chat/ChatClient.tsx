@@ -8,6 +8,7 @@ export default function ChatClient({ conversationId, userId }: { conversationId:
   const [messages, setMessages] = useState<any[]>([]); const [content, setContent] = useState(""); const [busy, setBusy] = useState(false); const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     fetch(`/api/chat?conversationId=${encodeURIComponent(conversationId)}`).then((response) => response.json()).then((result) => setMessages(result.messages ?? []));
+    void fetch("/api/chat", { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ conversationId }) });
     const channel = supabase.channel(`conversation:${conversationId}`).on("postgres_changes", { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${conversationId}` }, (payload) => setMessages((current) => current.some((message) => message.id === payload.new.id) ? current : [...current, payload.new])).subscribe();
     return () => { void supabase.removeChannel(channel); };
   }, [conversationId, supabase]);

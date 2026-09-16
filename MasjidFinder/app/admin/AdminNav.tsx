@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CalendarDays, CheckCircle2, ChevronRight, CreditCard, Flag, GraduationCap, LayoutDashboard, MapPin, Settings, Shield, Users, Building2 } from "lucide-react";
+import { CalendarDays, CheckCircle2, ChevronRight, CreditCard, Flag, GraduationCap, LayoutDashboard, MapPin, Settings, Shield, Users, Building2, ShoppingBag } from "lucide-react";
 
 const sections = [
   { href: "/admin", label: "Overview", icon: LayoutDashboard },
@@ -13,6 +13,7 @@ const sections = [
   { href: "/admin/verification", label: "Verification", icon: CheckCircle2 },
   { href: "/admin/locations", label: "Locations", icon: MapPin },
   { href: "/admin/subscriptions", label: "Subscriptions", icon: CreditCard },
+  { href: "/admin/shop", label: "Shop", icon: ShoppingBag },
   { href: "/admin/reports", label: "Reports & blocks", icon: Flag },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

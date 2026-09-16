@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { useLocationCascade } from "@/lib/hooks/useLocationCascade";
 
@@ -15,6 +15,7 @@ const imamRoles = [["imam_for_masjid", "Imam for Masjid"], ["hafiz_qari_for_tara
 
 export default function SignupWizard() {
   const router = useRouter();
+  const params = useSearchParams();
   const supabase = useMemo(() => createClient() as any, []);
   const { countries, states, cities, loadingCountries, loadingStates, loadingCities, loadStates, loadCities } = useLocationCascade();
   const [step, setStep] = useState<Step>("account");
@@ -29,11 +30,31 @@ export default function SignupWizard() {
     let active = true;
     supabase.auth.getUser().then(({ data }: any) => {
       if (!active) return;
-      setUserId(data.user?.id ?? null);
-      setAuthReady(true);
+      const user = data.user;
+      if (!user) {
+        setAuthReady(true);
+        return;
+      }
+      supabase.from("profiles").select("id").eq("id", user.id).maybeSingle().then(({ data: profile }: any) => {
+        if (!active) return;
+        if (profile) {
+          router.replace("/dashboard");
+          return;
+        }
+        if (params.get("new") === "1" || params.get("resume") === "1") {
+          setUserId(user.id);
+          setAuthReady(true);
+          return;
+        }
+        supabase.auth.signOut().finally(() => {
+          if (!active) return;
+          setUserId(null);
+          setAuthReady(true);
+        });
+      });
     });
     return () => { active = false; };
-  }, [supabase.auth]);
+  }, [params, router, supabase]);
   const selectedCountry = useMemo(() => countries.find((country) => country.id === countryId), [countries, countryId]);
 
   async function startGoogle() {

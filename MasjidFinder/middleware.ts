@@ -36,6 +36,10 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
+    if (user.email?.toLowerCase() === "masjidfinderofficial@gmail.com") {
+      await supabase.rpc("ensure_designated_admin");
+    }
+
     const { data: adminRow } = await supabase
       .from("admin_users")
       .select("admin_role, is_active")

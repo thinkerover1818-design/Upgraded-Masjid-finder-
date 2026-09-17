@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import BottomNav from "./components/BottomNav";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -42,7 +43,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const { code, dir } = await resolveLocale();
   return (
     <html lang={code} dir={dir}>
-      <body className="min-h-screen font-sans antialiased">{children}</body>
+      <body className="min-h-screen pb-16 font-sans antialiased">{children}<BottomNav /></body>
     </html>
   );
 }

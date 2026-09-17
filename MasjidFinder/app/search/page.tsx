@@ -66,8 +66,8 @@ export default async function SearchPage({
             </Link>
             <div className="flex items-center gap-1.5">
               {r.is_verified && (
-                <span title="Platform verified" className="text-[10px] font-semibold bg-blue-50 text-blue-700 px-2 py-1 rounded-full">
-                  ✓ Blue tick
+                <span title="Platform verified" aria-label="Platform verified" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-black text-white ring-2 ring-white">
+                  ✓
                 </span>
               )}
               {r.is_featured && (

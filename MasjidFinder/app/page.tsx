@@ -70,11 +70,11 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
           <span className="font-semibold text-emerald-900 text-lg">{data.platformName}</span>
           <nav className="flex items-center gap-2">
-            <Link href="/plans" className="hidden text-sm font-semibold text-emerald-900 sm:inline-block">
+            <Link href="/plans" className="text-xs font-semibold text-emerald-900 sm:text-sm">
               Plans
             </Link>
             {data.shopEnabled && (
-              <Link href="/shop" className="hidden text-sm font-semibold text-emerald-900 sm:inline-block">
+              <Link href="/shop" className="text-xs font-semibold text-emerald-900 sm:text-sm">
                 Shop
               </Link>
             )}

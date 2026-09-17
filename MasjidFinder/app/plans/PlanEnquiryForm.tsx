@@ -16,6 +16,7 @@ export default function PlanEnquiryForm({ planId }: { planId: string }) {
       body: JSON.stringify({ planId, contactMethod: method }),
     });
     const result = await response.json().catch(() => ({}));
+    if (response.ok && result.redirectUrl) window.location.assign(result.redirectUrl);
     setMessage(response.ok ? "Enquiry sent. We will contact you shortly." : result.error ?? "Could not send enquiry.");
     setState(response.ok ? "done" : "error");
   }

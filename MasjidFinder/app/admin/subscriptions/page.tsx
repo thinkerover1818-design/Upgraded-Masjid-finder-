@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminHeader, EmptyState, ErrorState, StatusBadge } from "../ui";
 import { adminDb, dateLabel, requireAdmin } from "../admin-data";
 
@@ -16,7 +17,12 @@ async function deletePlan(formData: FormData) {
   "use server";
   const db = adminDb(); const { data: { user } } = await db.auth.getUser(); if (!user) return;
   const { data: admin } = await db.from("admin_users").select("is_active").eq("profile_id", user.id).maybeSingle(); if (!admin?.is_active) return;
-  await db.from("subscription_plans").delete().eq("id", String(formData.get("id")));
+  const service = createAdminClient() as any;
+  const planId = String(formData.get("id") || "");
+  if (!planId) return;
+  await service.from("user_subscriptions").delete().eq("plan_id", planId);
+  await service.from("purchase_enquiries").delete().eq("plan_id", planId);
+  await service.from("subscription_plans").delete().eq("id", planId);
   revalidatePath("/admin/subscriptions"); revalidatePath("/plans");
 }
 

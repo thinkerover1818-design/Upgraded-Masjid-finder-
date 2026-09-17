@@ -1,4 +1,5 @@
 import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { AdminHeader, EmptyState, ErrorState, StatusBadge } from "../ui";
 import { adminDb, dateLabel, queryText, requireAdmin } from "../admin-data";
 
@@ -9,6 +10,21 @@ async function setUserStatus(formData: FormData) {
   const db = adminDb(); const { data: { user } } = await db.auth.getUser(); if (!user) return;
   const id = String(formData.get("id")); const action = String(formData.get("action"));
   await db.from("profiles").update(action === "ban" ? { is_banned: true, is_active: false } : action === "suspend" ? { is_suspended: true } : { is_banned: false, is_suspended: false, is_active: true }).eq("id", id);
+  revalidatePath("/admin/users");
+}
+
+async function deleteUser(formData: FormData) {
+  "use server";
+  const db = adminDb(); const { data: { user } } = await db.auth.getUser(); if (!user) return;
+  const { data: admin } = await db.from("admin_users").select("is_active").eq("profile_id", user.id).maybeSingle(); if (!admin?.is_active) return;
+  const id = String(formData.get("id") || "");
+  if (!id) return;
+  const service = createAdminClient() as any;
+  await service.from("profiles").delete().eq("id", id);
+  const { error } = await service.auth.admin.deleteUser(id);
+  if (error) {
+    await service.from("profiles").delete().eq("id", id).throwOnError();
+  }
   revalidatePath("/admin/users");
 }
 

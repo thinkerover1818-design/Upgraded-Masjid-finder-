@@ -65,7 +65,12 @@ async function deleteProduct(formData: FormData) {
   "use server";
   const db = adminDb(); const { data: { user } } = await db.auth.getUser(); if (!user) return;
   const { data: admin } = await db.from("admin_users").select("is_active").eq("profile_id", user.id).maybeSingle(); if (!admin?.is_active) return;
-  await (createAdminClient() as any).from("shop_products").delete().eq("id", String(formData.get("id")));
+  const service = createAdminClient() as any;
+  const productId = String(formData.get("id") || "");
+  if (!productId) return;
+  await service.from("shop_order_items").delete().eq("product_id", productId);
+  await service.from("shop_enquiries").delete().eq("product_id", productId);
+  await service.from("shop_products").delete().eq("id", productId);
   revalidatePath("/admin/shop"); revalidatePath("/shop");
 }
 

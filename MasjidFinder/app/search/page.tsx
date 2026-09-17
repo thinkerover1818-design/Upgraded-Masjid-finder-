@@ -45,7 +45,7 @@ export default async function SearchPage({
     p_offset: 0,
   });
   const profileIds = ((data ?? []) as SearchResult[]).filter((item) => item.entity_type === "profile").map((item) => item.entity_id);
-  const { data: profileCards } = profileIds.length ? await supabase.from("public_profile_cards").select("id,username,age,country_name,flag_emoji,firqah,roles,profile_picture_url").in("id", profileIds) : { data: [] };
+  const { data: profileCards } = profileIds.length ? await supabase.from("public_profile_cards").select("id,username,age,country_name,flag_emoji,firqah,roles,profile_picture_url,verification_status").in("id", profileIds) : { data: [] };
   const profileMap = new Map<string, any>((profileCards ?? []).map((profile: any) => [profile.id, profile]));
   const enriched = ((data ?? []) as SearchResult[]).map((item) => ({ ...item, ...(profileMap.get(item.entity_id) ?? {}) }));
 
@@ -68,7 +68,7 @@ export default async function SearchPage({
         {enriched.map((r) => (
           <li key={r.id} className="flex min-h-20 items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4">
             <Link href={`/profile/${r.entity_id}?type=${r.entity_type}`} className="min-w-0 flex-1 hover:text-emerald-700">
-              <div className="flex min-w-0 items-center gap-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sand-100 text-xs font-bold text-emerald-900">{r.profile_picture_url ? <img src={r.profile_picture_url} alt="" className="h-full w-full object-cover" /> : r.display_name.slice(0, 1)}</div><div className="min-w-0"><p className="truncate whitespace-nowrap font-semibold text-ink-900 text-sm">{r.display_name}</p><p className="truncate whitespace-nowrap text-xs text-ink-500">{r.country_name ? `${r.flag_emoji ?? ""} ${r.country_name}` : r.entity_type} · {r.firqah?.replaceAll("_", " ") || "Firqah not set"} · {(r.roles ?? []).map((role: string) => role.replaceAll("_", " ")).join(", ") || "Role not set"}</p></div></div>
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sand-100 text-xs font-bold text-emerald-900">{r.profile_picture_url ? <img src={r.profile_picture_url} alt="" className="h-full w-full object-cover" /> : r.display_name.slice(0, 1)}</div><div className="min-w-0"><p className="flex items-center gap-1 truncate whitespace-nowrap font-semibold text-ink-900 text-sm">{r.display_name}{(r.is_verified || r.verification_status === "verified") && <span title="Platform verified" aria-label="Platform verified" className="inline-flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-blue-500 text-[10px] font-black text-white">✓</span>}</p><p className="truncate whitespace-nowrap text-xs text-ink-500">{r.country_name ? `${r.flag_emoji ?? ""} ${r.country_name}` : r.entity_type} · {r.firqah?.replaceAll("_", " ") || "Firqah not set"} · {(r.roles ?? []).map((role: string) => role.replaceAll("_", " ")).join(", ") || "Role not set"}</p></div></div>
             </Link>
             <div className="shrink-0"><Link href={`/profile/${r.entity_id}?type=${r.entity_type}`} className="inline-flex h-10 items-center rounded-lg border border-emerald-900 px-3 text-xs font-semibold text-emerald-900">View profile</Link>
             </div>

@@ -8,8 +8,16 @@ async function createPlan(formData: FormData) {
   "use server";
   const db = adminDb(); const { data: { user } } = await db.auth.getUser(); if (!user) return;
   const { data: admin } = await db.from("admin_users").select("is_active").eq("profile_id", user.id).maybeSingle(); if (!admin?.is_active) return;
-  await db.from("subscription_plans").insert({ name: String(formData.get("name")), description: String(formData.get("description") || "") || null, price: Number(formData.get("price") || 0), currency: String(formData.get("currency") || "USD").toUpperCase(), duration_days: Number(formData.get("duration_days") || 30), enquiry_limit: Number(formData.get("enquiry_limit") || 0), boost_duration_days: Number(formData.get("boost_duration_days") || 0), scope: String(formData.get("scope") || "country"), benefits: { verified_badge: formData.get("verified_badge") === "on", featured: formData.get("featured") === "on" }, is_active: true });
+  await db.from("subscription_plans").insert({ name: String(formData.get("name")), description: String(formData.get("description") || "") || null, price: Number(formData.get("price") || 0), currency: String(formData.get("currency") || "USD").toUpperCase(), duration_days: Number(formData.get("duration_days") || 30), enquiry_limit: Number(formData.get("enquiry_limit") || 0), boost_duration_days: Number(formData.get("boost_duration_days") || 0), scope: String(formData.get("scope") || "country"), benefits: { model: String(formData.get("model") || "profile"), verified_badge: formData.get("verified_badge") === "on", featured: formData.get("featured") === "on", whatsapp_message: String(formData.get("whatsapp_message") || "") }, is_active: true });
   revalidatePath("/admin/subscriptions");
+}
+
+async function deletePlan(formData: FormData) {
+  "use server";
+  const db = adminDb(); const { data: { user } } = await db.auth.getUser(); if (!user) return;
+  const { data: admin } = await db.from("admin_users").select("is_active").eq("profile_id", user.id).maybeSingle(); if (!admin?.is_active) return;
+  await db.from("subscription_plans").delete().eq("id", String(formData.get("id")));
+  revalidatePath("/admin/subscriptions"); revalidatePath("/plans");
 }
 
 async function updateEnquiry(formData: FormData) {

@@ -38,7 +38,7 @@ export default async function PlansPage() {
                     {plan.benefits?.featured ? <li>• Featured listing placement</li> : null}
                   </ul>
                 </div>
-                <PlanEnquiryForm planId={plan.id} />
+                <PlanEnquiryForm planId={plan.id} whatsappMessage={plan.benefits?.whatsapp_message || `I want to enquire about the ${plan.name} plan.`} />
               </article>
             ))}
           </section>

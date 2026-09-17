@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import HomeSearchBar from "@/components/HomeSearchBar";
+import TopMenu from "./components/TopMenu";
 
 // Everything below reads from platform_settings/categories/countries —
 // nothing is hard-coded, so renaming a category or adding a country never
 // requires touching this file (satisfies the "no code change" requirement).
 async function getHomeData() {
   const supabase = createClient() as any;
+  const { data: { user } } = await supabase.auth.getUser();
 
   const [{ data: settingsRows }, { data: categories }, { data: countries }] = await Promise.all([
     supabase
@@ -39,6 +41,7 @@ async function getHomeData() {
     donationsEnabled: settings.donations_enabled !== false,
     categories: categories ?? [],
     countries: countries ?? [],
+    loggedIn: Boolean(user),
   };
 }
 
@@ -70,20 +73,8 @@ export default async function Home() {
         <div className="max-w-5xl mx-auto flex items-center justify-between px-4 py-3">
           <span className="font-semibold text-emerald-900 text-lg">{data.platformName}</span>
           <nav className="flex items-center gap-2">
-            <Link href="/plans" className="text-xs font-semibold text-emerald-900 sm:text-sm">
-              Plans
-            </Link>
-            {data.shopEnabled && (
-              <Link href="/shop" className="text-xs font-semibold text-emerald-900 sm:text-sm">
-                Shop
-              </Link>
-            )}
-            <Link href="/login" className="text-sm font-semibold px-4 py-2 rounded-lg border border-emerald-900 text-emerald-900">
-              Log In
-            </Link>
-            <Link href="/signup" className="text-sm font-semibold px-4 py-2 rounded-lg bg-emerald-900 text-white">
-              Sign Up
-            </Link>
+            {!data.loggedIn && <Link href="/signup" className="text-sm font-semibold px-4 py-2 rounded-lg border border-emerald-900 text-emerald-900">Sign up</Link>}
+            <TopMenu loggedIn={data.loggedIn} />
           </nav>
         </div>
       </header>
@@ -125,14 +116,6 @@ export default async function Home() {
             Donate (backend ready, page coming soon)
           </span>
         )}
-        {data.shopEnabled ? <Link
-          href="/shop"
-          className={`rounded-full border border-black/10 px-4 py-2 text-sm font-semibold ${
-            "bg-white text-emerald-900 hover:bg-emerald-50"
-          }`}
-        >
-          Islamic Shop
-        </Link> : <span className="rounded-full border border-black/10 bg-sand-100 px-4 py-2 text-sm font-semibold text-ink-400">Islamic Shop (currently unavailable)</span>}
       </section>
 
       <footer className="border-t border-black/5 mt-8">

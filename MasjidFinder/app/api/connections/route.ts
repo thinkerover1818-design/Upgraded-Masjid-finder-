@@ -1,6 +1,18 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export async function GET(request: NextRequest) {
+  const supabase = createClient() as any;
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Please log in first." }, { status: 401 });
+  const connectionId = request.nextUrl.searchParams.get("connectionId");
+  if (!connectionId) return NextResponse.json({ error: "Connection is required." }, { status: 400 });
+  const { data: connection } = await supabase.from("connections").select("id,requester_id,recipient_id,status").eq("id", connectionId).maybeSingle();
+  if (!connection || (connection.requester_id !== user.id && connection.recipient_id !== user.id)) return NextResponse.json({ error: "Connection not found." }, { status: 404 });
+  const { data: conversation } = await supabase.from("conversations").select("id").eq("connection_id", connectionId).maybeSingle();
+  return NextResponse.json({ conversationId: conversation?.id ?? null });
+}
+
 export async function POST(request: NextRequest) {
   const supabase = createClient() as any;
   const { data: { user } } = await supabase.auth.getUser();

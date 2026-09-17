@@ -15,6 +15,7 @@ interface CategoryOption {
   role_key: string;
   label: string;
 }
+const firqahs = ["sunni_hanafi", "sunni_shafii", "sunni_maliki", "sunni_hanbali", "barelvi", "deobandi", "salafi_ahle_hadith", "ahl_e_hadith", "shia", "shia_ithna_ashari", "ismaili", "bohra", "ibadi", "ahmadi", "quranist", "other", "prefer_not_to_say"];
 
 // This replaces the prototype's hard-coded 8-country <select> with real
 // countries from the DB, and actually navigates to a working /search page
@@ -31,6 +32,7 @@ export default function HomeSearchBar({
   const [countryId, setCountryId] = useState("");
   const [scope, setScope] = useState("my_country");
   const [role, setRole] = useState("");
+  const [firqah, setFirqah] = useState("");
 
   function onSearch() {
     const params = new URLSearchParams();
@@ -38,6 +40,7 @@ export default function HomeSearchBar({
     if (countryId) params.set("country", countryId);
     params.set("scope", scope);
     if (role) params.set("role", role);
+    if (firqah) params.set("firqah", firqah);
     router.push(`/search?${params.toString()}`);
   }
 
@@ -86,6 +89,7 @@ export default function HomeSearchBar({
           ))}
         </select>
       </div>
+      <div className="flex items-center gap-1.5 border border-black/10 rounded-lg px-2.5 py-2"><select value={firqah} onChange={(e) => setFirqah(e.target.value)} className="flex-1 text-xs bg-transparent outline-none"><option value="">All Firqahs / Maslaks</option>{firqahs.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></div>
       <button
         onClick={onSearch}
         className="bg-emerald-900 text-white rounded-lg py-3 font-semibold text-sm flex items-center justify-center gap-2 hover:bg-emerald-700"

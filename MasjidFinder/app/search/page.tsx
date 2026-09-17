@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import SearchFilters from "./SearchFilters";
 
 export const dynamic = "force-dynamic";
 
@@ -15,12 +14,19 @@ interface SearchResult {
   is_featured: boolean;
   distance_km: number | null;
   rank_score: number;
+  username?: string | null;
+  age?: number | null;
+  country_name?: string | null;
+  flag_emoji?: string | null;
+  firqah?: string | null;
+  roles?: string[] | null;
+  profile_picture_url?: string | null;
 }
 
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string; country?: string; scope?: string; role?: string; type?: string; verified?: string; lat?: string; lng?: string };
+  searchParams: { q?: string; country?: string; scope?: string; role?: string; firqah?: string; type?: string; verified?: string; lat?: string; lng?: string };
 }) {
   const supabase = createClient() as any;
   const scope = searchParams.scope ?? "all_countries";
@@ -32,16 +38,20 @@ export default async function SearchPage({
     p_my_country_id: searchParams.country || null,
     p_lat: searchParams.lat ? Number(searchParams.lat) : null,
     p_lng: searchParams.lng ? Number(searchParams.lng) : null,
+    p_firqah: searchParams.firqah || null,
     p_verified_only: searchParams.verified === "1",
     p_text_query: searchParams.q || null,
     p_limit: 30,
     p_offset: 0,
   });
+  const profileIds = ((data ?? []) as SearchResult[]).filter((item) => item.entity_type === "profile").map((item) => item.entity_id);
+  const { data: profileCards } = profileIds.length ? await supabase.from("public_profile_cards").select("id,username,age,country_name,flag_emoji,firqah,roles,profile_picture_url").in("id", profileIds) : { data: [] };
+  const profileMap = new Map<string, any>((profileCards ?? []).map((profile: any) => [profile.id, profile]));
+  const enriched = ((data ?? []) as SearchResult[]).map((item) => ({ ...item, ...(profileMap.get(item.entity_id) ?? {}) }));
 
   return (
     <main className="max-w-3xl mx-auto p-6">
       <BackBar />
-      <SearchFilters />
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 text-red-800 text-sm p-4 mb-4">
           Search failed: {error.message}. If this is a fresh install, confirm the migrations in{" "}
@@ -55,27 +65,12 @@ export default async function SearchPage({
         </div>
       )}
       <ul className="flex flex-col gap-3">
-        {((data as SearchResult[] | null) ?? []).map((r) => (
-          <li key={r.id} className="rounded-xl border border-black/10 bg-white p-4 flex items-center justify-between gap-4">
+        {enriched.map((r) => (
+          <li key={r.id} className="flex min-h-20 items-center justify-between gap-3 rounded-xl border border-black/10 bg-white p-4">
             <Link href={`/profile/${r.entity_id}?type=${r.entity_type}`} className="min-w-0 flex-1 hover:text-emerald-700">
-              <p className="font-semibold text-ink-900 text-sm">{r.display_name}</p>
-              <p className="text-xs text-ink-400">
-                {r.account_code} · {r.entity_type}
-                {r.distance_km != null ? ` · ${r.distance_km.toFixed(1)} km away` : ""}
-              </p>
+              <div className="flex min-w-0 items-center gap-3"><div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sand-100 text-xs font-bold text-emerald-900">{r.profile_picture_url ? <img src={r.profile_picture_url} alt="" className="h-full w-full object-cover" /> : r.display_name.slice(0, 1)}</div><div className="min-w-0"><p className="truncate whitespace-nowrap font-semibold text-ink-900 text-sm">{r.display_name}</p><p className="truncate whitespace-nowrap text-xs text-ink-500">{r.country_name ? `${r.flag_emoji ?? ""} ${r.country_name}` : r.entity_type} · {r.firqah?.replaceAll("_", " ") || "Firqah not set"} · {(r.roles ?? []).map((role: string) => role.replaceAll("_", " ")).join(", ") || "Role not set"}</p></div></div>
             </Link>
-            <div className="flex items-center gap-1.5">
-              {r.is_verified && (
-                <span title="Platform verified" aria-label="Platform verified" className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-blue-500 text-xs font-black text-white ring-2 ring-white">
-                  ✓
-                </span>
-              )}
-              {r.is_featured && (
-                <span className="text-[10px] font-semibold bg-gold-500/20 text-gold-600 px-2 py-1 rounded-full">
-                  Featured
-                </span>
-              )}
-              <Link href={`/profile/${r.entity_id}?type=${r.entity_type}`} className="rounded-lg border border-emerald-900 px-3 py-2 text-xs font-semibold text-emerald-900">View profile</Link>
+            <div className="shrink-0"><Link href={`/profile/${r.entity_id}?type=${r.entity_type}`} className="inline-flex h-10 items-center rounded-lg border border-emerald-900 px-3 text-xs font-semibold text-emerald-900">View profile</Link>
             </div>
           </li>
         ))}

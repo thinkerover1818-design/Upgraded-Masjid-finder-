@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-export default function PlanEnquiryForm({ planId }: { planId: string }) {
+export default function PlanEnquiryForm({ planId, whatsappMessage }: { planId: string; whatsappMessage: string }) {
   const [method, setMethod] = useState<"whatsapp" | "email">("whatsapp");
   const [state, setState] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [message, setMessage] = useState("");
@@ -13,7 +13,7 @@ export default function PlanEnquiryForm({ planId }: { planId: string }) {
     const response = await fetch("/api/subscriptions", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ planId, contactMethod: method }),
+      body: JSON.stringify({ planId, contactMethod: method, whatsappMessage }),
     });
     const result = await response.json().catch(() => ({}));
     if (response.ok && result.redirectUrl) window.location.assign(result.redirectUrl);
